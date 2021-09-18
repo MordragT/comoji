@@ -53,6 +53,7 @@ pub fn ask_for_scope() -> Result<String, io::Error> {
     let theme = get_theme();
     let scope: String = Input::with_theme(theme.as_ref())
         .with_prompt("Enter the scope of current changes:")
+        .allow_empty(true)
         .validate_with(|v: &String| {
             if v.contains('`') {
                 Err("Enter a valid scope")
@@ -93,6 +94,7 @@ pub fn ask_for_message() -> Result<String, io::Error> {
             Ok(())
         }
     });
+    input.allow_empty(true);
 
     input.interact()
 }
@@ -103,12 +105,13 @@ pub fn ask_for_issue() -> Result<String, io::Error> {
     let mut input = Input::with_theme(theme.as_ref());
     input.with_prompt("Enter the referring issue:");
     input.validate_with(|v: &String| {
-        if v.contains('`') || v.is_empty() {
+        if v.contains('`') {
             Err("Enter a valid issue")
         } else {
             Ok(())
         }
     });
+    input.allow_empty(true);
 
     input.interact()
 }

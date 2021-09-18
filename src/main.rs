@@ -186,16 +186,20 @@ fn commit() -> Result<(), GitmojiError> {
     }
     commit_title += " ";
     if Configuration::is_scope_prompt()? {
-        commit_title += scope.as_str();
-        commit_title += ": ";
+        if !scope.is_empty() {
+            commit_title += scope.as_str();
+            commit_title += ": ";
+        }
     }
     commit_title += title.as_str();
 
     if Configuration::is_issue_prompt()? {
-        commit_title += " (";
         let issue = ask_for_issue()?;
-        commit_title += issue.as_str();
-        commit_title += ")";
+        if !issue.is_empty() {
+            commit_title += " (";
+            commit_title += issue.as_str();
+            commit_title += ")";
+        }
     }
 
     if Configuration::is_auto_add()? {
