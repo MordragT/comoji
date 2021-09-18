@@ -1,6 +1,9 @@
 //! Handles everything that concerns the configuration.
+use crate::prompts::{
+    config_for_auto_add, config_for_emoji_format, config_for_issue_prompt, config_for_scope_prompt,
+    config_for_signed_commit,
+};
 use crate::GitmojiError;
-use crate::prompts::{config_for_auto_add, config_for_emoji_format, config_for_scope_prompt, config_for_signed_commit, config_for_issue_prompt};
 
 /// Emojiformat which should be used in the commit.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -8,7 +11,7 @@ pub enum EmojiFormat {
     /// CODE would like :smile:
     CODE,
     /// EMOJI would be the unicode character itself
-    EMOJI
+    EMOJI,
 }
 
 impl Default for EmojiFormat {

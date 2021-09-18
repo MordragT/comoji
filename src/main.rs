@@ -26,25 +26,27 @@ extern crate confy;
 #[macro_use]
 extern crate serde_derive;
 
+use crate::configuration::{Configuration, EmojiFormat};
+use crate::prompts::{
+    ask_for_emoji, ask_for_issue, ask_for_message, ask_for_scope, ask_for_title, Emoji,
+};
 use clap::{load_yaml, App, AppSettings::ColoredHelp};
-use spinners::{Spinners, Spinner};
-use std::path::PathBuf;
-use dirs::home_dir;
-use std::fs::{create_dir, OpenOptions};
-use std::io::{Write, Read};
 use colored::Colorize;
+use dirs::home_dir;
 use json::JsonValue;
 use once_cell::sync::Lazy;
-use crate::prompts::{Emoji, ask_for_emoji, ask_for_scope, ask_for_title, ask_for_message, ask_for_issue};
+use spinners::{Spinner, Spinners};
+use std::fs::{create_dir, OpenOptions};
+use std::io::{Read, Write};
+use std::path::PathBuf;
 use std::process::Command;
 use std::str;
-use crate::configuration::{Configuration, EmojiFormat};
 
-pub mod prompts;
 pub mod configuration;
+pub mod prompts;
 
 /// Gitmojis location to fetch from
-static GITMOJI_URL : &'static str =
+static GITMOJI_URL: &'static str =
     "https://raw.githubusercontent.com/carloscuesta/gitmoji/master/src/data/gitmojis.json";
 
 /// Gitmojis cache folder location
@@ -67,7 +69,8 @@ pub enum GitmojiError {
     ReqwestError(reqwest::Error),
     JsonError(json::JsonError),
     IOError(std::io::Error),
-    Other(String)
+    ConfyError(confy::ConfyError),
+    Other(String),
 }
 
 impl From<reqwest::Error> for GitmojiError {
@@ -88,6 +91,12 @@ impl From<std::io::Error> for GitmojiError {
     }
 }
 
+impl From<confy::ConfyError> for GitmojiError {
+    fn from(err: confy::ConfyError) -> Self {
+        GitmojiError::ConfyError(err)
+    }
+}
+
 fn main() {
     let yml = load_yaml!("main.yaml");
     let matches = App::from_yaml(yml)
@@ -97,36 +106,57 @@ fn main() {
         .set_term_width(80)
         .get_matches();
 
+    let verbose = matches.is_present("verbose");
+
     if matches.is_present("list") {
-        if list_emojis(false).is_err() {
+        let list = list_emojis(false);
+        if list.is_err() {
             eprintln!("Could not list gitmojis.");
+            if verbose {
+                eprintln!("{:?}\n", list);
+            }
         }
     }
     if matches.is_present("update") {
-        if list_emojis(true).is_err() {
-            eprintln!("Could not update gitmojis.")
+        let list = list_emojis(true);
+        if list.is_err() {
+            eprintln!("Could not update gitmojis.");
+            if verbose {
+                eprintln!("{:?}\n", list);
+            }
         }
     }
 
     let query = matches.value_of("search");
     if matches.is_present("search") && query.is_some() {
-        if search_emojis(query.unwrap()).is_err() {
-            eprintln!("Could not search gitmojis.")
+        let search = search_emojis(query.unwrap());
+        if search.is_err() {
+            eprintln!("Could not search gitmojis.");
+            if verbose {
+                eprintln!("{:?}\n", search);
+            }
         }
     }
 
     if matches.is_present("commit") {
-        if commit().is_err() {
+        let commit = commit();
+        if commit.is_err() {
             eprintln!("Could not commit.");
+            if verbose {
+                eprintln!("{:?}\n", commit);
+            }
         }
     }
 
     if matches.is_present("config") {
-        if config().is_err() {
-            eprintln!("Could not configure.");
+        let config = config();
+        if config.is_err() {
+            eprintln!("Could not configure: {:?}", config);
+            if verbose {
+                eprintln!("{:?}\n", config);
+            }
         }
     }
-
 }
 
 /// configures the cli
@@ -169,10 +199,7 @@ fn commit() -> Result<(), GitmojiError> {
     }
 
     if Configuration::is_auto_add()? {
-        Command::new("git")
-            .arg("add")
-            .arg(".")
-            .output()?;
+        Command::new("git").arg("add").arg(".").output()?;
     }
 
     if Configuration::is_signed_commit()? {
@@ -214,8 +241,15 @@ fn search_emojis(query: &str) -> Result<(), GitmojiError> {
     let mut filtered = vec![];
 
     for emo in emojis {
-        if emo["name"].to_string().to_ascii_lowercase().contains(&query.to_ascii_lowercase()) ||
-            emo["description"].to_string().to_ascii_lowercase().contains(&query.to_ascii_lowercase()) {
+        if emo["name"]
+            .to_string()
+            .to_ascii_lowercase()
+            .contains(&query.to_ascii_lowercase())
+            || emo["description"]
+                .to_string()
+                .to_ascii_lowercase()
+                .contains(&query.to_ascii_lowercase())
+        {
             filtered.push(emo.clone())
         }
     }
@@ -235,7 +269,7 @@ fn list_emojis(refetch: bool) -> Result<(), GitmojiError> {
 
 /// Fetches the emojis from `GITMOJI_URL` and stores in the cache.
 fn fetch_emojis() -> Result<(), GitmojiError> {
-    let sp = Spinner::new(Spinners::Dots9, "Fetching the emoji list".into());
+    let sp = Spinner::new(&Spinners::Dots9, "Fetching the emoji list".into());
     let response: String = reqwest::blocking::get(GITMOJI_URL)?.text()?;
     create_emoji_cache(json::parse(response.as_str())?)?;
     sp.stop();
@@ -267,12 +301,19 @@ fn get_emojis() -> Result<Vec<JsonValue>, GitmojiError> {
     if let JsonValue::Array(obj) = json["gitmojis"].clone() {
         return Ok(obj);
     }
-    Err(GitmojiError::Other("Could not find gitmoji list in json.".to_owned()))
+    Err(GitmojiError::Other(
+        "Could not find gitmoji list in json.".to_owned(),
+    ))
 }
 
 /// Prints a given list of `emojis` encoded in Json.
 fn print_emojis(emojis: Vec<JsonValue>) {
     for gitmoji in emojis.iter() {
-        println!("{} - {} - {}", gitmoji["emoji"], gitmoji["code"].to_string().blue(), gitmoji["description"]);
+        println!(
+            "{} - {} - {}",
+            gitmoji["emoji"],
+            gitmoji["code"].to_string().blue(),
+            gitmoji["description"]
+        );
     }
 }

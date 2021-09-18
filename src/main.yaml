@@ -6,6 +6,11 @@ author: Jonas Geschke <mail@yonny.de>
 # All Args must be defined in the 'args:' list where the name of the arg, is the
 # key to a Hash object
 args:
+  - verbose:
+      short: v
+      long: verbose
+      help: Display verbose output
+      required: false
   - config:
       short: g
       long: config
