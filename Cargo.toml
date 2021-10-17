@@ -17,7 +17,7 @@ dirs = "4.0"
 json = "0.12"
 colored = "2.0"
 once_cell = "1.8"
-dialoguer = { git = "https://github.com/mitsuhiko/dialoguer", version = "0.8", features = ["fuzzy-select"] }
+dialoguer = { version = "0.9", features = ["fuzzy-select"] }
 confy = "0.4"
 serde_derive = "1.0"
 serde = "1.0"
