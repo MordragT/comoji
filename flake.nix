@@ -2,22 +2,21 @@
   inputs = {
     utils.url = "github:numtide/flake-utils";
     naersk.url = "github:nmattia/naersk";
+    fenix.url = "github:nix-community/fenix";
   };
 
-  outputs = { self, nixpkgs, utils, naersk }: utils.lib.eachDefaultSystem (system: let
+  outputs = { self, nixpkgs, utils, naersk, fenix }: utils.lib.eachDefaultSystem (system: let
     pkgs = nixpkgs.legacyPackages."${system}";
     naersk-lib = naersk.lib."${system}";
   in rec {
-        
     # `nix build`
-    packages.gitmoji = naersk-lib.buildPackage {
-      pname = "gitmoji";
-      root = ./.;
-      buildInputs = with pkgs; [
-        openssl
-        pkgconfig
-      ];
+    packages.gitmoji = import ./default.nix {
+      inherit system;
+      inherit (nixpkgs) lib;
+      inherit pkgs;
+      inherit naersk fenix;
     };
+      
     defaultPackage = packages.gitmoji;
 
     # `nix run`
