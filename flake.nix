@@ -9,6 +9,9 @@
       pkgs = nixpkgs.legacyPackages."${system}";
       naersk-lib = naersk.lib."${system}";
     in rec {
+      
+      overlay = import ./overlay.nix;
+      
       # `nix build`
       packages.gitmoji = naersk-lib.buildPackage {
         pname = "gitmoji";
