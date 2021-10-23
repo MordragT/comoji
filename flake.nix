@@ -12,7 +12,7 @@
       };
     });
       
-    utils.lib.eachDefaultSystem (system: let
+    gitmoji = utils.lib.eachDefaultSystem (system: let
       pkgs = nixpkgs.legacyPackages."${system}";
       naersk-lib = naersk.lib."${system}";
     in rec {
