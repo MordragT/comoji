@@ -21,7 +21,7 @@
       defaultPackage = packages.gitmoji;
 
       # `nix run`
-      apps.my-project = utils.lib.mkApp {
+      apps.gitmoji = utils.lib.mkApp {
         drv = packages.gitmoji;
       };
       defaultApp = apps.gitmoji;
