@@ -10,9 +10,13 @@
       naersk-lib = naersk.lib."${system}";
     in rec {
       # `nix build`
-      packages.my-project = naersk-lib.buildPackage {
+      packages.gitmoji = naersk-lib.buildPackage {
         pname = "gitmoji";
         root = ./.;
+        buildInputs = with pkgs; [
+          openssl
+          pkgconfig
+        ];
       };
       defaultPackage = packages.gitmoji;
 
