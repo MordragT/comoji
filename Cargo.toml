@@ -11,7 +11,7 @@ documentation = "https://docs.rs/gitmoji-cli"
 
 [dependencies]
 clap = { version = "2.33", features = ["yaml", "wrap_help"] }
-reqwest = { version = "0.11", features = ["json", "blocking"] }
+reqwest = { version = "0.11", features = ["json", "blocking", "rustls-tls"] }
 spinners = "2.0"
 dirs = "4.0"
 json = "0.12"
