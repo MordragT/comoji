@@ -1,7 +1,7 @@
 use std::fmt;
 
 /// List of emojis
-pub const EMOJIS: [Emoji<'static>; 10] = [
+pub const EMOJIS: [Emoji<'static>; 11] = [
     Emoji::new("👷", "build:", "Build related changes"),
     Emoji::new("🔧", "chore:", "Code change invisible to external users"),
     Emoji::new("✨", "feat:", "A new feature"),
@@ -12,6 +12,7 @@ pub const EMOJIS: [Emoji<'static>; 10] = [
     Emoji::new("💄", "style:", "Better styling"),
     Emoji::new("✅", "test:", "Add or update tests"),
     Emoji::new("🎉", "release:", "Release a new version"),
+    Emoji::new("📦️", "deps:", "Add or update packages and dependencies"),
 ];
 
 /// Struct of emoji data
