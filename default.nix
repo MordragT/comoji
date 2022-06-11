@@ -17,13 +17,13 @@ let
   };
 in
 naersk-lib.buildPackage {
-  pname = "gitmoji";
+  pname = "comoji";
   root = ./.;
   buildInputs = with pkgs; [
     openssl
     pkgconfig
   ];
   meta = with lib; {
-    description = "Gitmoji cli to create beautiful git commit messages";
+    description = "comoji cli to create beautiful git commit messages";
   };
 }

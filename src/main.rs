@@ -1,4 +1,5 @@
-//! Gitmoji Cli is a command line utility to handle organized commit messages by leveraging gitmojis.
+//! comoji is a command line utility to handle organized commit messages by leveraging conventional commits.
+//! But instead of an textual representation, emojis are used.
 //! It contains an interactive commit interface to handle commit data:
 //! * Emoji
 //! * Title
@@ -8,159 +9,75 @@
 //! * Optional Signed Commit
 //!
 //! # Installation
-//! With cargo ```cargo install gitmoji-cli```
+//! With cargo ```cargo install --path . --locked```
 //! # Usage
-//! ## List, Update and Search
-//! You can just list all emojis which can be used with ```gitmoji -l```.
-//! ```gitmoji -u``` updates the cached emoji list and ```gitmoji -s <query>``` can search
-//! for a specific gitmoji.
+//! ## Lis
+//! You can just list all emojis which can be used with ```comoji list```.
 //! ## Configure
-//! You can configure optional prompts or defaults by executing ```gitmoji -g```.
+//! You can configure optional prompts or defaults by executing ```comoji config```.
 //! ## Commit
-//! To start the interactive commit interface type ```gitmoji -c```.
-#[macro_use]
-extern crate clap;
-
-extern crate confy;
-
+//! To start the interactive commit interface type ```comoji commit```.
 #[macro_use]
 extern crate serde_derive;
 
 use crate::configuration::{Configuration, EmojiFormat};
-use crate::prompts::{
-    ask_for_emoji, ask_for_issue, ask_for_message, ask_for_scope, ask_for_title, Emoji,
-};
-use clap::{load_yaml, App, AppSettings::ColoredHelp};
-use colored::Colorize;
-use dirs::home_dir;
-use json::JsonValue;
-use once_cell::sync::Lazy;
-use spinners::{Spinner, Spinners};
-use std::fs::{create_dir, OpenOptions};
-use std::io::{Read, Write};
-use std::path::PathBuf;
+use crate::prompts::{ask_for_emoji, ask_for_issue, ask_for_message, ask_for_scope, ask_for_title};
+use clap::{Arg, Command as ClapCommand};
+use emoji::EMOJIS;
+use error::*;
 use std::process::Command;
-use std::str;
 
 pub mod configuration;
+pub mod emoji;
+pub mod error;
 pub mod prompts;
 
-/// Gitmojis location to fetch from
-static GITMOJI_URL: &'static str =
-    "https://raw.githubusercontent.com/carloscuesta/gitmoji/master/src/data/gitmojis.json";
-
-/// Gitmojis cache folder location
-static GITMOJI_FOLDER: Lazy<PathBuf> = Lazy::new(|| {
-    let folder_name = ".gitmoji";
-    let folder = home_dir().expect("should have home_dir").join(folder_name);
-    folder
-});
-
-/// Gitmjis chache file location
-static GITMOJI_CACHE: Lazy<PathBuf> = Lazy::new(|| {
-    let cache_file = "gitmojis.json";
-    let cache_path = GITMOJI_FOLDER.join(cache_file);
-    cache_path
-});
-
-/// Global error collector
-#[derive(Debug)]
-pub enum GitmojiError {
-    ReqwestError(reqwest::Error),
-    JsonError(json::JsonError),
-    IOError(std::io::Error),
-    ConfyError(confy::ConfyError),
-    Other(String),
-}
-
-impl From<reqwest::Error> for GitmojiError {
-    fn from(err: reqwest::Error) -> Self {
-        GitmojiError::ReqwestError(err)
-    }
-}
-
-impl From<json::JsonError> for GitmojiError {
-    fn from(err: json::JsonError) -> Self {
-        GitmojiError::JsonError(err)
-    }
-}
-
-impl From<std::io::Error> for GitmojiError {
-    fn from(err: std::io::Error) -> Self {
-        GitmojiError::IOError(err)
-    }
-}
-
-impl From<confy::ConfyError> for GitmojiError {
-    fn from(err: confy::ConfyError) -> Self {
-        GitmojiError::ConfyError(err)
-    }
-}
-
 fn main() {
-    let yml = load_yaml!("main.yaml");
-    let matches = App::from_yaml(yml)
-        .settings(&[ColoredHelp])
-        .version(&crate_version!()[..])
-        .author(&crate_authors!()[..])
-        .set_term_width(80)
+    let matches = ClapCommand::new("comoji")
+        .about("Interactive git commit command line interface")
+        .version(clap::crate_version!())
+        .author(clap::crate_authors!())
+        .subcommand_required(true)
+        .arg(Arg::new("verbose"))
+        .subcommands([
+            ClapCommand::new("list").about("List all available comojis"),
+            ClapCommand::new("commit").about("Interactively commit using the prompts"),
+            ClapCommand::new("config").about("Setup preferences"),
+        ])
         .get_matches();
 
     let verbose = matches.is_present("verbose");
 
-    if matches.is_present("list") {
-        let list = list_emojis(false);
-        if list.is_err() {
-            eprintln!("Could not list gitmojis.");
-            if verbose {
-                eprintln!("{:?}\n", list);
+    match matches.subcommand() {
+        Some(("list", _)) => {
+            for comoji in EMOJIS {
+                println!("{comoji}");
             }
         }
-    }
-    if matches.is_present("update") {
-        let list = list_emojis(true);
-        if list.is_err() {
-            eprintln!("Could not update gitmojis.");
-            if verbose {
-                eprintln!("{:?}\n", list);
+        Some(("commit", _)) => {
+            let commit = commit();
+            if commit.is_err() {
+                eprintln!("Could not commit.");
+                if verbose {
+                    eprintln!("{:?}\n", commit);
+                }
             }
         }
-    }
-
-    let query = matches.value_of("search");
-    if matches.is_present("search") && query.is_some() {
-        let search = search_emojis(query.unwrap());
-        if search.is_err() {
-            eprintln!("Could not search gitmojis.");
-            if verbose {
-                eprintln!("{:?}\n", search);
+        Some(("config", _)) => {
+            let config = config();
+            if config.is_err() {
+                eprintln!("Could not configure: {:?}", config);
+                if verbose {
+                    eprintln!("{:?}\n", config);
+                }
             }
         }
-    }
-
-    if matches.is_present("commit") {
-        let commit = commit();
-        if commit.is_err() {
-            eprintln!("Could not commit.");
-            if verbose {
-                eprintln!("{:?}\n", commit);
-            }
-        }
-    }
-
-    if matches.is_present("config") {
-        let config = config();
-        if config.is_err() {
-            eprintln!("Could not configure: {:?}", config);
-            if verbose {
-                eprintln!("{:?}\n", config);
-            }
-        }
+        _ => unreachable!(),
     }
 }
 
 /// configures the cli
-fn config() -> Result<(), GitmojiError> {
+fn config() -> ComojiResult<()> {
     let mut configuration = Configuration::load()?;
     configuration.prompt()?;
     configuration.store()?;
@@ -168,9 +85,8 @@ fn config() -> Result<(), GitmojiError> {
 }
 
 /// starts the interactive commit interface
-fn commit() -> Result<(), GitmojiError> {
-    let emojis: Vec<Emoji> = get_emojis()?.iter().map(|val| Emoji::from(val)).collect();
-    let emoji = ask_for_emoji(&emojis)?;
+fn commit() -> ComojiResult<()> {
+    let emoji = ask_for_emoji(&EMOJIS)?;
     let mut scope = String::new();
     if Configuration::is_scope_prompt()? {
         scope = ask_for_scope()?;
@@ -180,9 +96,9 @@ fn commit() -> Result<(), GitmojiError> {
 
     let mut commit_title = String::new();
     if Configuration::emoji_format()? == EmojiFormat::CODE {
-        commit_title += emoji.clone().code.as_str();
+        commit_title += emoji.code;
     } else {
-        commit_title += emoji.clone().emoji.as_str();
+        commit_title += emoji.emoji;
     }
     commit_title += " ";
     if Configuration::is_scope_prompt()? {
@@ -237,87 +153,4 @@ fn commit() -> Result<(), GitmojiError> {
         }
     }
     Ok(())
-}
-
-/// Searches the emojis list by a given `query` and prints the result.
-fn search_emojis(query: &str) -> Result<(), GitmojiError> {
-    let emojis = get_emojis()?;
-    let mut filtered = vec![];
-
-    for emo in emojis {
-        if emo["name"]
-            .to_string()
-            .to_ascii_lowercase()
-            .contains(&query.to_ascii_lowercase())
-            || emo["description"]
-                .to_string()
-                .to_ascii_lowercase()
-                .contains(&query.to_ascii_lowercase())
-        {
-            filtered.push(emo.clone())
-        }
-    }
-    print_emojis(filtered);
-    Ok(())
-}
-
-/// Lists all cached emojis in the list and prints it.
-fn list_emojis(refetch: bool) -> Result<(), GitmojiError> {
-    if !GITMOJI_CACHE.exists() || refetch {
-        fetch_emojis()?;
-    }
-    let emojis = get_emojis()?;
-    print_emojis(emojis);
-    Ok(())
-}
-
-/// Fetches the emojis from `GITMOJI_URL` and stores in the cache.
-fn fetch_emojis() -> Result<(), GitmojiError> {
-    let sp = Spinner::new(&Spinners::Dots9, "Fetching the emoji list".into());
-    let response: String = reqwest::blocking::get(GITMOJI_URL)?.text()?;
-    create_emoji_cache(json::parse(response.as_str())?)?;
-    sp.stop();
-    print!("\r");
-    Ok(())
-}
-
-/// Stores `emojis` JsonObject in `GITMOJI_CACHE`
-fn create_emoji_cache(emojis: JsonValue) -> Result<(), GitmojiError> {
-    if !GITMOJI_CACHE.exists() {
-        create_dir(GITMOJI_CACHE.parent().expect("should have parent!"))?;
-    }
-    OpenOptions::new()
-        .create(true)
-        .write(true)
-        .open(GITMOJI_CACHE.clone())?
-        .write_all(emojis.dump().as_bytes())?;
-    Ok(())
-}
-
-/// Retrieves the emoji list from the cache
-fn get_emojis() -> Result<Vec<JsonValue>, GitmojiError> {
-    let mut string = String::new();
-    OpenOptions::new()
-        .read(true)
-        .open(GITMOJI_CACHE.clone())?
-        .read_to_string(&mut string)?;
-    let json = json::parse(string.as_str())?;
-    if let JsonValue::Array(obj) = json["gitmojis"].clone() {
-        return Ok(obj);
-    }
-    Err(GitmojiError::Other(
-        "Could not find gitmoji list in json.".to_owned(),
-    ))
-}
-
-/// Prints a given list of `emojis` encoded in Json.
-fn print_emojis(emojis: Vec<JsonValue>) {
-    for gitmoji in emojis.iter() {
-        println!(
-            "{} - {} - {}",
-            gitmoji["emoji"],
-            gitmoji["code"].to_string().blue(),
-            gitmoji["description"]
-        );
-    }
 }

@@ -1,23 +1,16 @@
 [package]
-name = "gitmoji"
+name = "comoji"
 version = "1.1.1"
-authors = ["Jonas Geschke <github@yonny.de>"]
-edition = "2018"
+authors = ["Thomas Wehmöller <contact.mordrag@gmail.com>", "Jonas Geschke <github@yonny.de>"]
+edition = "2021"
 license = "MIT"
-description = "CLI for gitmoji"
-homepage = "https://github.com/kegesch/gitmoji-cli"
-repository = "https://github.com/kegesch/gitmoji-cli"
-documentation = "https://docs.rs/gitmoji-cli"
+description = "CLI for conventional emoji commits"
+homepage = "https://github.com/MordragT/comoji"
+repository = "https://github.com/MordragT/comoji"
 
 [dependencies]
-clap = { version = "2.33", features = ["yaml", "wrap_help"] }
-reqwest = { version = "0.11", default-features = false, features = ["json", "blocking", "rustls-tls"] }
-spinners = "2.0"
-dirs = "4.0"
-json = "0.12"
-colored = "2.0"
-once_cell = "1.8"
-dialoguer = { version = "0.9", features = ["fuzzy-select"] }
+clap = { version = "3.1", features = ["cargo"] }
+dialoguer = { version = "0.10", features = ["fuzzy-select"] }
 confy = "0.4"
 serde_derive = "1.0"
 serde = "1.0"

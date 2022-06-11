@@ -7,35 +7,36 @@
 
   outputs = { self, nixpkgs, utils, naersk, fenix }: let
     overlay = (final: prev: {
-      gitmoji = prev.callPackage (import ./default.nix) {
+      comoji = prev.callPackage (import ./default.nix) {
         inherit naersk fenix;
       };
     });
   in { overlay = overlay; } // utils.lib.eachDefaultSystem (system: let
     pkgs = nixpkgs.legacyPackages."${system}";
     naersk-lib = naersk.lib."${system}";
+    toolchain = fenix.packages.${system}.complete;
   in rec {
     # `nix build`
-    packages.gitmoji = import ./default.nix {
+    packages.comoji = import ./default.nix {
       inherit system;
       inherit (nixpkgs) lib;
       inherit pkgs;
       inherit naersk fenix;
     };
-      
-    defaultPackage = packages.gitmoji;
+    packages.default = packages.comoji;
 
     # `nix run`
-    apps.gitmoji = utils.lib.mkApp {
-      drv = packages.gitmoji;
+    apps.comoji = utils.lib.mkApp {
+      drv = packages.comoji;
     };
-    defaultApp = apps.gitmoji;
+    apps.default = apps.comoji;
 
     # `nix develop`
     devShell = pkgs.mkShell {
       nativeBuildInputs = with pkgs; [
-        rustc
-        cargo
+        (toolchain.withComponents [
+          "cargo" "rustc" "rust-src" "rustfmt" "clippy"    
+        ])
         openssl
         pkgconfig
       ];

@@ -1,43 +1,69 @@
 [![gitmoji badge](https://img.shields.io/badge/gitmoji-%20😜%20😍-FFDD67.svg?style=flat-square)](https://github.com/carloscuesta/gitmoji)
 ![crates.io](https://img.shields.io/crates/v/gitmoji.svg)
 
-# gitmoji-cli
-> A [gitmoji](https://github.com/carloscuesta/gitmoji) interactive client for using gitmojis on commit messages.
+# comoji
+> A conventional commits CLI using emojis.
 
 ## About
 
-This project provides an easy solution for using [**gitmoji**](https://github.com/carloscuesta/gitmoji) from your command line. Gitmoji-cli solves the hassle of searching through the gitmoji list. Includes a bunch of options you can play with! :tada:
-And it is a shameless copy of the [original](https://github.com/carloscuesta/gitmoji-cli) but written in Rust.
+This project was originally written for using [**gitmoji**](https://github.com/carloscuesta/gitmoji) from your command line,
+but has since evolved into a helper for [**conventional commits**](https://www.conventionalcommits.org/en/v1.0.0/).
+Instead of using text though, emojis are used as the commit type.
+
 ## Install
 
+### Cargo
+
 ```bash
-$ cargo install gitmoji
+git clone git@github.com:MordragT/comoji.git
+cd comoji
+$ cargo install --path . --locked
+```
+### Nix Flakes
+
+Add comoji as nix input and simply use the overlay.
+
+```nix
+{
+    inputs.comoji.url = "github:MordragT/comoji";
+    outputs = { self, nixpkgs, comoji, ... }@inputs:
+    let
+        pkgs = import nixpkgs {
+            inherit system;
+            overlays = [ comoji.overlay ];
+        };
+    in {
+        ...
+        home.packages = with pkgs; [ comoji ];
+    }
+}
 ```
 
 ## Usage
 
 ```bash
-$ gitmoji --help
+$ comoji --help
 ```
 
 ```
-A gitmoji interactive client for using gitmojis on commit messages.
+Thomas Wehmöller <contact.mordrag@gmail.com>:Jonas Geschke <github@yonny.de>
+Interactive git commit command line interface
 
 USAGE:
-    gitmoji [FLAGS] [OPTIONS]
+    comoji [verbose] <SUBCOMMAND>
 
-FLAGS:
-    -c, --commit     Interactively commit using the prompts
-    -g, --config     Setup gitmoji-cli preferences
-    -h, --help       Prints help information
-    -i, --init       Initiliaze gitmoji as a commit hook
-    -l, --list       List all the available gitmojis
-    -r, --remove     Remove a previously initialized commit hook
-    -u, --update     Sync emoji list with the repo
-    -V, --version    Prints version information
+ARGS:
+    <verbose>    
 
 OPTIONS:
-    -s, --search <query>    Search gitmojis
+    -h, --help       Print help information
+    -V, --version    Print version information
+
+SUBCOMMANDS:
+    commit    Interactively commit using the prompts
+    config    Setup preferences
+    help      Print this message or the help of the given subcommand(s)
+    list      List all available comojis
 ```
 
 ### Commit
@@ -49,46 +75,28 @@ You can use the commit functionality in two ways, directly or via a commit-hook.
 Start the interactive commit client, to auto generate your commit based on your prompts.
 
 ```bash
-$ gitmoji -c
+$ gitmoji commit
 ```
 
 #### Hook
 
-Run the init option, add your changes and commit them, after that the prompts will begin and your commit message will be built.
+Set config as shown below.
 
 ```bash
-$ gitmoji -i
 $ git add .
 $ git commit
 ```
 
-⚠️ The hook **should not be used** with the `gitmoji -c` command.
-
-### Search
-
-Search using specific keywords to find the right gitmoji.
-
-```bash
-$ gitmoji -s bug
-```
-
+⚠️ The hook **should not be used** with the `comoji commit` command.
 
 ### List
 
-Pretty print all the available gitmojis.
+Pretty print all the available comojis.
 
 ```bash
-$ gitmoji -l
-```
-
-### Update
-
-Update the gitmojis list, by default the first time you run gitmoji, the cli creates a cache to allow using this tool without internet connection.
-
-```bash
-$ gitmoji -u
+$ comoji list
 ```
 
 ### Config
 
-Run `gitmoji -g` to setup some gitmoji-cli preferences, such as the auto `git add .` feature.
+Run `comoji config` to setup some preferences, such as the auto `git add .` feature.
