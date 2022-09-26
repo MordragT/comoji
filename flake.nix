@@ -54,9 +54,9 @@
               pkg-config
             ];
           };
-
-          overlays.default = self: pkgs: {
-            comoji = packages.default;
-          };
-        });
+        }) // {
+      overlays.default = self: pkgs: {
+        comoji = self.packages."${pkgs.system}".default;
+      };
+    };
 }
