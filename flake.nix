@@ -55,7 +55,7 @@
             ];
           };
         }) // {
-      overlays.default = self: pkgs: {
+      overlays.default = this: pkgs: {
         comoji = self.packages."${pkgs.system}".default;
       };
     };
