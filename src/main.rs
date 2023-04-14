@@ -11,7 +11,7 @@
 //! # Installation
 //! With cargo ```cargo install --path . --locked```
 //! # Usage
-//! ## Lis
+//! ## List
 //! You can just list all emojis which can be used with ```comoji list```.
 //! ## Configure
 //! You can configure optional prompts or defaults by executing ```comoji config```.
@@ -22,39 +22,49 @@ extern crate serde_derive;
 
 use crate::configuration::{Configuration, EmojiFormat};
 use crate::prompts::{ask_for_emoji, ask_for_issue, ask_for_message, ask_for_scope, ask_for_title};
-use clap::{Arg, Command as ClapCommand};
+use clap::{Parser, Subcommand};
 use emoji::EMOJIS;
 use error::*;
 use std::process::Command;
 
-pub mod configuration;
-pub mod emoji;
-pub mod error;
-pub mod prompts;
+mod configuration;
+mod emoji;
+mod error;
+mod prompts;
+
+/// Interactive git commit command line interface
+#[derive(Parser, Debug)]
+#[command(author, about)]
+struct Cli {
+    #[clap(subcommand)]
+    command: CliCommand,
+    #[clap(short, long)]
+    verbose: bool,
+}
+
+#[derive(Subcommand, Debug)]
+#[command(author, about)]
+enum CliCommand {
+    /// List all available comojis
+    List,
+    /// Interactively commit using the prompts
+    Commit,
+    /// Setup preferences
+    Config,
+}
 
 fn main() {
-    let matches = ClapCommand::new("comoji")
-        .about("Interactive git commit command line interface")
-        .version(clap::crate_version!())
-        .author(clap::crate_authors!())
-        .subcommand_required(true)
-        .arg(Arg::new("verbose"))
-        .subcommands([
-            ClapCommand::new("list").about("List all available comojis"),
-            ClapCommand::new("commit").about("Interactively commit using the prompts"),
-            ClapCommand::new("config").about("Setup preferences"),
-        ])
-        .get_matches();
+    let cli = Cli::parse();
 
-    let verbose = matches.is_present("verbose");
+    let verbose = cli.verbose;
 
-    match matches.subcommand() {
-        Some(("list", _)) => {
+    match cli.command {
+        CliCommand::List => {
             for comoji in EMOJIS {
                 println!("{comoji}");
             }
         }
-        Some(("commit", _)) => {
+        CliCommand::Commit => {
             let commit = commit();
             if commit.is_err() {
                 eprintln!("Could not commit.");
@@ -63,7 +73,7 @@ fn main() {
                 }
             }
         }
-        Some(("config", _)) => {
+        CliCommand::Config => {
             let config = config();
             if config.is_err() {
                 eprintln!("Could not configure: {:?}", config);
@@ -72,7 +82,6 @@ fn main() {
                 }
             }
         }
-        _ => unreachable!(),
     }
 }
 

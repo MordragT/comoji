@@ -43,13 +43,13 @@ impl Configuration {
 
     /// loads a configuration from the disk
     pub fn load() -> ComojiResult<Configuration> {
-        let config: Configuration = confy::load("comoji")?;
+        let config: Configuration = confy::load("comoji", None)?;
         Ok(config)
     }
 
     /// stores a configuration on the disk
     pub fn store(&self) -> ComojiResult<()> {
-        confy::store("comoji", self)?;
+        confy::store("comoji", None, self)?;
         Ok(())
     }
 

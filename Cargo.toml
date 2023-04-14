@@ -1,6 +1,6 @@
 [package]
 name = "comoji"
-version = "1.2.0"
+version = "1.2.1"
 authors = ["Thomas Wehmöller <contact.mordrag@gmail.com>", "Jonas Geschke <github@yonny.de>"]
 edition = "2021"
 license = "MIT"
@@ -9,8 +9,8 @@ homepage = "https://github.com/MordragT/comoji"
 repository = "https://github.com/MordragT/comoji"
 
 [dependencies]
-clap = { version = "3.1", features = ["cargo"] }
-dialoguer = { version = "0.10", features = ["fuzzy-select"] }
-confy = "0.4"
+clap = { version = "4.2", features = ["default", "derive"] }
+dialoguer = { version = "0.10.4", features = ["fuzzy-select"] }
+confy = "0.5.1"
 serde_derive = "1.0"
 serde = "1.0"

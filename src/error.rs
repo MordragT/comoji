@@ -5,7 +5,7 @@ pub type ComojiResult<T> = Result<T, ComojiError>;
 pub enum ComojiError {
     IOError(std::io::Error),
     ConfyError(confy::ConfyError),
-    Other(String),
+    //Other(String),
 }
 
 impl From<std::io::Error> for ComojiError {

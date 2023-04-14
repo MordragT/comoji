@@ -3,28 +3,18 @@
 
   inputs = {
     utils.url = "github:numtide/flake-utils";
-    fenix = {
-      url = "github:nix-community/fenix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
   };
 
-  outputs = { self, nixpkgs, utils, fenix }:
+  outputs = { self, nixpkgs, utils }:
     utils.lib.eachDefaultSystem
       (system:
         let
-          pkgs = import nixpkgs {
-            inherit system;
-            overlays = [ fenix.overlay ];
-          };
-          toolchain = pkgs.fenix.complete;
+          pkgs = import nixpkgs { inherit system; };
         in
         rec {
-          packages.default = (pkgs.makeRustPlatform {
-            inherit (toolchain) cargo rustc;
-          }).buildRustPackage {
+          packages.default = pkgs.rustPlatform.buildRustPackage {
             pname = "comoji";
-            version = "1.2.0";
+            version = "1.2.1";
             src = ./.;
             cargoLock.lockFile = ./Cargo.lock;
 
@@ -43,16 +33,19 @@
 
           devShells.default = pkgs.mkShell {
             nativeBuildInputs = with pkgs; [
-              (with toolchain; [
-                cargo
-                rustc
-                rust-src
-                clippy
-                rustfmt
+              (with rustPlatform; [
+                rust.cargo
+                rust.rustc
+                rustLibSrc
               ])
+              clippy
+              rustfmt
               openssl
               pkg-config
             ];
+
+            RUST_SRC_PATH = "${pkgs.rustPlatform.rustLibSrc}";
+
           };
         }) // {
       overlays.default = this: pkgs: {
