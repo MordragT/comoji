@@ -1,8 +1,12 @@
-[![gitmoji badge](https://img.shields.io/badge/gitmoji-%20😜%20😍-FFDD67.svg?style=flat-square)](https://github.com/carloscuesta/gitmoji)
-![crates.io](https://img.shields.io/crates/v/gitmoji.svg)
+<div align=center>
 
-# comoji
-> A conventional commits CLI using emojis.
+# comoji 🦀
+
+[![Rust](https://img.shields.io/badge/Made_for-Rust-orange.svg?logo=rust&style=for-the-badge)](https://www.rust-lang.org/)![License](https://img.shields.io/github/license/mordragt/comoji?style=for-the-badge)
+
+Comoji - Conventional Commits using Emojis
+
+</div>
 
 ## About
 
@@ -30,7 +34,7 @@ Add comoji as nix input and simply use the overlay.
     let
         pkgs = import nixpkgs {
             inherit system;
-            overlays = [ comoji.overlay ];
+            overlays = [ comoji.overlays.default ];
         };
     in {
         ...
@@ -46,24 +50,19 @@ $ comoji --help
 ```
 
 ```
-Thomas Wehmöller <contact.mordrag@gmail.com>:Jonas Geschke <github@yonny.de>
-Interactive git commit command line interface
+CLI for conventional emoji commits
 
-USAGE:
-    comoji [verbose] <SUBCOMMAND>
+Usage: comoji [OPTIONS] <COMMAND>
 
-ARGS:
-    <verbose>    
+Commands:
+  list    List all available comojis
+  commit  Interactively commit using the prompts
+  config  Setup preferences
+  help    Print this message or the help of the given subcommand(s)
 
-OPTIONS:
-    -h, --help       Print help information
-    -V, --version    Print version information
-
-SUBCOMMANDS:
-    commit    Interactively commit using the prompts
-    config    Setup preferences
-    help      Print this message or the help of the given subcommand(s)
-    list      List all available comojis
+Options:
+  -v, --verbose  
+  -h, --help     Print help
 ```
 
 ### Commit
@@ -75,7 +74,7 @@ You can use the commit functionality in two ways, directly or via a commit-hook.
 Start the interactive commit client, to auto generate your commit based on your prompts.
 
 ```bash
-$ gitmoji commit
+$ comoji commit
 ```
 
 #### Hook
@@ -100,3 +99,7 @@ $ comoji list
 ### Config
 
 Run `comoji config` to setup some preferences, such as the auto `git add .` feature.
+
+## Acknowledgements
+
+- [GitMoji](https://github.com/kegesch/gitmoji-cli) - the project comoji is built upon
