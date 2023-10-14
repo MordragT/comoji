@@ -1,21 +1,25 @@
+use miette::Diagnostic;
+use thiserror::Error;
+
 pub type ComojiResult<T> = Result<T, ComojiError>;
 
 /// Global error collector
-#[derive(Debug)]
+#[derive(Debug, Error, Diagnostic)]
 pub enum ComojiError {
-    IOError(std::io::Error),
-    ConfyError(confy::ConfyError),
-    //Other(String),
+    #[error(transparent)]
+    Io(std::io::Error),
+    #[error(transparent)]
+    Dialoguer(dialoguer::Error),
 }
 
 impl From<std::io::Error> for ComojiError {
     fn from(err: std::io::Error) -> Self {
-        ComojiError::IOError(err)
+        Self::Io(err)
     }
 }
 
-impl From<confy::ConfyError> for ComojiError {
-    fn from(err: confy::ConfyError) -> Self {
-        ComojiError::ConfyError(err)
+impl From<dialoguer::Error> for ComojiError {
+    fn from(value: dialoguer::Error) -> Self {
+        Self::Dialoguer(value)
     }
 }

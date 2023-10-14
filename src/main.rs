@@ -17,149 +17,103 @@
 //! You can configure optional prompts or defaults by executing ```comoji config```.
 //! ## Commit
 //! To start the interactive commit interface type ```comoji commit```.
-#[macro_use]
-extern crate serde_derive;
 
-use crate::configuration::{Configuration, EmojiFormat};
-use crate::prompts::{ask_for_emoji, ask_for_issue, ask_for_message, ask_for_scope, ask_for_title};
+use crate::{commit::*, config::*, emoji::EMOJIS, error::*};
 use clap::{Parser, Subcommand};
-use emoji::EMOJIS;
-use error::*;
-use std::process::Command;
+use dialoguer::theme::ColorfulTheme;
+use directories::BaseDirs;
+use figment::{
+    providers::{Env, Format, Serialized, Toml},
+    Figment,
+};
+use miette::{diagnostic, IntoDiagnostic, Result};
+use std::{
+    fs::{self, File},
+    process::Command,
+};
 
-mod configuration;
-mod emoji;
-mod error;
-mod prompts;
+pub mod commit;
+pub mod config;
+pub mod emoji;
+pub mod error;
 
 /// Interactive git commit command line interface
 #[derive(Parser, Debug)]
 #[command(author, about)]
-struct Cli {
+struct App {
     #[clap(subcommand)]
-    command: CliCommand,
+    command: Cmd,
     #[clap(short, long)]
     verbose: bool,
 }
 
 #[derive(Subcommand, Debug)]
 #[command(author, about)]
-enum CliCommand {
+enum Cmd {
     /// List all available comojis
     List,
     /// Interactively commit using the prompts
-    Commit,
+    Commit(Config),
     /// Setup preferences
     Config,
 }
-
-fn main() {
-    let cli = Cli::parse();
+fn main() -> Result<()> {
+    let cli = App::parse();
 
     let verbose = cli.verbose;
+    let config_path = match BaseDirs::new() {
+        Some(dirs) => dirs.config_dir().join("comoji/config.toml"),
+        None => return Err(diagnostic!("Could not find config directory.").into()),
+    };
+    let theme = ColorfulTheme::default();
 
     match cli.command {
-        CliCommand::List => {
+        Cmd::List => {
             for comoji in EMOJIS {
                 println!("{comoji}");
             }
+            Ok(())
         }
-        CliCommand::Commit => {
-            let commit = commit();
-            if commit.is_err() {
-                eprintln!("Could not commit.");
-                if verbose {
-                    eprintln!("{:?}\n", commit);
-                }
-            }
+        Cmd::Commit(config) => {
+            // let commit = commit();
+            // if commit.is_err() {
+            //     eprintln!("Could not commit.");
+            //     if verbose {
+            //         eprintln!("{:?}\n", commit);
+            //     }
+            // }
+
+            let config: Config = Figment::new()
+                .merge(Toml::file(config_path))
+                .merge(Serialized::defaults(config))
+                .merge(Env::prefixed("COMOJI_"))
+                .extract()
+                .into_diagnostic()?;
+
+            let commit = Commit::prompt(&theme, &config)?;
+            commit.build()?;
+
+            Ok(())
         }
-        CliCommand::Config => {
-            let config = config();
-            if config.is_err() {
-                eprintln!("Could not configure: {:?}", config);
-                if verbose {
-                    eprintln!("{:?}\n", config);
-                }
-            }
-        }
-    }
-}
+        Cmd::Config => {
+            // let config = config();
+            // if config.is_err() {
+            //     eprintln!("Could not configure: {:?}", config);
+            //     if verbose {
+            //         eprintln!("{:?}\n", config);
+            //     }
+            // }
 
-/// configures the cli
-fn config() -> ComojiResult<()> {
-    let mut configuration = Configuration::load()?;
-    configuration.prompt()?;
-    configuration.store()?;
-    Ok(())
-}
+            // let mut configuration = Config::load()?;
+            // configuration.prompt()?;
+            // configuration.store()?;
+            // Ok(())
 
-/// starts the interactive commit interface
-fn commit() -> ComojiResult<()> {
-    let emoji = ask_for_emoji(&EMOJIS)?;
-    let mut scope = String::new();
-    if Configuration::is_scope_prompt()? {
-        scope = ask_for_scope()?;
-    }
-    let title = ask_for_title()?;
-    let message = ask_for_message()?;
+            let config = Config::prompt(&theme)?;
+            let config_toml = toml::to_string(&config).into_diagnostic()?;
+            fs::write(config_path, config_toml).into_diagnostic()?;
 
-    let mut commit_title = String::new();
-    if Configuration::emoji_format()? == EmojiFormat::CODE {
-        commit_title += emoji.code;
-    } else {
-        commit_title += emoji.emoji;
-    }
-    commit_title += " ";
-    if Configuration::is_scope_prompt()? {
-        if !scope.is_empty() {
-            commit_title += scope.as_str();
-            commit_title += ": ";
+            Ok(())
         }
     }
-    commit_title += title.as_str();
-
-    if Configuration::is_issue_prompt()? {
-        let issue = ask_for_issue()?;
-        if !issue.is_empty() {
-            commit_title += " (";
-            commit_title += issue.as_str();
-            commit_title += ")";
-        }
-    }
-
-    if Configuration::is_auto_add()? {
-        Command::new("git").arg("add").arg(".").output()?;
-    }
-
-    if Configuration::is_signed_commit()? {
-        let git_output = Command::new("git")
-            .arg("commit")
-            .arg("-S")
-            .arg("-m")
-            .arg(commit_title)
-            .arg("-m")
-            .arg(message)
-            .output()?;
-
-        if git_output.status.success() {
-            println!("{}", String::from_utf8_lossy(git_output.stdout.as_ref()));
-        } else {
-            eprintln!("{}", String::from_utf8_lossy(git_output.stderr.as_ref()));
-        }
-    } else {
-        let git_output = Command::new("git")
-            .arg("commit")
-            .arg("-m")
-            .arg(commit_title)
-            .arg("-m")
-            .arg(message)
-            .output()?;
-
-        if git_output.status.success() {
-            println!("{}", String::from_utf8_lossy(git_output.stdout.as_ref()));
-        } else {
-            eprintln!("{}", String::from_utf8_lossy(git_output.stderr.as_ref()));
-        }
-    }
-    Ok(())
 }
