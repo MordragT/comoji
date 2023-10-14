@@ -1,10 +1,9 @@
-//! Collection of all used prompts
 use std::process::Command;
 
 use crate::config::Config;
+use crate::emoji::Emoji;
 use crate::emoji::EMOJIS;
 use crate::error::ComojiResult;
-use crate::{config::EmojiFormat, emoji::Emoji};
 use dialoguer::theme::Theme;
 use dialoguer::{FuzzySelect, Input};
 use miette::{IntoDiagnostic, Result};
@@ -24,12 +23,7 @@ impl<'a> Commit<'a> {
             .with_prompt("Choose a comoji:")
             .items(&EMOJIS)
             .interact()?;
-
-        let emoji = EMOJIS
-            .into_iter()
-            .enumerate()
-            .find_map(|(i, emoji)| if i == selection { Some(emoji) } else { None })
-            .unwrap();
+        let emoji = EMOJIS[selection].clone();
 
         let scope = if config.scope_prompt {
             Some(
@@ -111,10 +105,10 @@ impl<'a> Commit<'a> {
         } = self;
 
         let mut commit_title = String::new();
-        if config.emoji_format == EmojiFormat::Code {
-            commit_title += emoji.code;
-        } else {
+        if config.emoji_format {
             commit_title += emoji.emoji;
+        } else {
+            commit_title += emoji.code;
         }
         commit_title += " ";
         if let Some(scope) = scope {

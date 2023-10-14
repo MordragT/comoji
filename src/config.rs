@@ -1,31 +1,16 @@
 //! Handles everything that concerns the configuration.
 use crate::error::*;
-use clap::{Parser, ValueEnum};
+use clap::Parser;
 use dialoguer::{theme::Theme, Confirm, Select};
 use serde::{Deserialize, Serialize};
-
-/// Emojiformat which should be used in the commit.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ValueEnum)]
-pub enum EmojiFormat {
-    /// CODE would like :smile:
-    Code,
-    /// EMOJI would be the unicode character itself
-    Emoji,
-}
-
-impl Default for EmojiFormat {
-    fn default() -> Self {
-        EmojiFormat::Code
-    }
-}
 
 /// Stores the configuration for the cli
 #[derive(Parser, Debug, Serialize, Deserialize)]
 pub struct Config {
     #[clap(short, long)]
     pub auto_add: bool,
-    #[clap(value_enum, default_value_t = EmojiFormat::Code)]
-    pub emoji_format: EmojiFormat,
+    #[clap(short, long)]
+    pub emoji_format: bool,
     #[clap(short = 'p', long)]
     pub scope_prompt: bool,
     #[clap(short, long)]
@@ -44,14 +29,11 @@ impl Config {
 
         let selection = Select::with_theme(theme)
             .with_prompt("Select how emojis should be used in commits:")
-            .items(&["release:", "🎉"])
+            .items(&[":release:", "🎉"])
             .default(0)
             .interact()?;
 
-        let emoji_format = match selection {
-            0 => EmojiFormat::Code,
-            _ => EmojiFormat::Emoji,
-        };
+        let emoji_format = selection != 0;
 
         let scope_prompt = Confirm::with_theme(theme)
             .with_prompt("Enable scope prompt:")
