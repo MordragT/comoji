@@ -16,7 +16,7 @@
     in rec {
       packages.default = pkgs.rustPlatform.buildRustPackage {
         pname = "comoji";
-        version = "1.3.0";
+        version = "1.3.1";
         src = ./.;
         cargoLock.lockFile = ./Cargo.lock;
 
