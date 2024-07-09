@@ -36,8 +36,8 @@
       devShells.default = pkgs.mkShell {
         nativeBuildInputs = with pkgs; [
           (with rustPlatform; [
-            rust.cargo
-            rust.rustc
+            cargo
+            rustc
             rustLibSrc
           ])
           clippy
